@@ -48,6 +48,10 @@ def test_recommendations_exclude_seen_items(system):
     for u in test.user[:50]:
         out = rec.recommend(u, 20)
         assert len(out) == 20 and len(set(out)) == 20 and not set(out) & rec.seen[u]
+    r, *_ = synthetic(**SMALL)
+    low = r[r.rating < 4]
+    u, i = low.user.iloc[0], low.item.iloc[0]
+    assert i in rec.seen[u]  # a movie rated low is watched too: never recommended
 
 
 def test_api_serves_topk_within_budget(system, monkeypatch):

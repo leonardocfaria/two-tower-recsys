@@ -6,10 +6,10 @@ import torch.nn.functional as F
 
 
 class TwoTower(nn.Module):
-    def __init__(self, n_users, n_items, n_genres, dim=32, hidden=64):
+    def __init__(self, n_users, n_items, n_genres, dim=32, hidden=64, n_age=7, n_occ=21):
         super().__init__()
         self.user_id, self.item_id = nn.Embedding(n_users, hidden), nn.Embedding(n_items, hidden)
-        self.age, self.gender, self.occ = nn.Embedding(7, 8), nn.Embedding(2, 4), nn.Embedding(21, 8)
+        self.age, self.gender, self.occ = nn.Embedding(n_age, 8), nn.Embedding(2, 4), nn.Embedding(n_occ, 8)
         self.user_mlp = nn.Sequential(nn.Linear(hidden + 20 + n_genres, hidden), nn.ReLU(), nn.Linear(hidden, dim))
         self.item_mlp = nn.Sequential(nn.Linear(hidden + n_genres, hidden), nn.ReLU(), nn.Linear(hidden, dim))
 
@@ -31,7 +31,7 @@ def train_towers(train, users, items, epochs=15, batch=512, lr=3e-3, temp=0.05, 
     G = torch.tensor(items.sort_values("item").filter(like="g").to_numpy(), dtype=torch.float32)
     P = torch.zeros(len(users), G.shape[1]).index_add_(0, torch.tensor(train.user.to_numpy().copy()), G[train.item.to_numpy()])
     P = P / P.sum(1, keepdim=True).clamp(min=1)
-    model = TwoTower(len(users), len(items), G.shape[1], dim)
+    model = TwoTower(len(users), len(items), G.shape[1], dim, n_age=int(users.age.max()) + 1, n_occ=int(users.occupation.max()) + 1)
     opt = torch.optim.Adam(model.parameters(), lr=lr)
     freq = np.bincount(train.item, minlength=len(items)) + 1
     logq = torch.tensor(np.log(freq / freq.sum()) if logq_correction else np.zeros(len(freq)), dtype=torch.float32)

@@ -12,7 +12,7 @@ state = {}
 
 
 def load_system():
-    # shortcut: trains at startup (~20 s); persist embeddings + index + ranker when this goes to production
+    # shortcut: trains at startup (~15 s); persist embeddings + index + ranker when this goes to production
     return build(epochs=int(os.environ.get("RECSYS_EPOCHS", "15")))[0]
 
 

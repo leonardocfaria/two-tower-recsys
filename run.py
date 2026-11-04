@@ -1,4 +1,4 @@
-"""Train + evaluate + measure API latency. python run.py [--out results]   (~1 min on 4 vCPUs)"""
+"""Train + evaluate + measure API latency. python run.py [--out results]   (~25 s on 4 vCPUs)"""
 import argparse
 import json
 import time

@@ -9,6 +9,6 @@ Build "Two-tower recommender with ANN retrieval and ranking". Train a two-tower 
 - [x] API serves top-k under a measured latency
 - [x] Tests pass with one command; CI workflow runs them
 - [x] README with setup, usage, architecture and results
-- [ ] Self code review done
+- [x] Self code review done
 - [ ] Draft PR open
 

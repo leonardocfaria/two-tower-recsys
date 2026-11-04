@@ -24,8 +24,9 @@ def ndcg_at_k(recs, gold, k) -> float:
 
 
 class Recommender:
-    def __init__(self, user_emb, item_emb, history, items, temp=0.05, ef_search=128):
-        """history: positives the user has already seen (excluded from recommendations, used for features).
+    def __init__(self, user_emb, item_emb, history, items, temp=0.05, ef_search=128, exclude=None):
+        """history: positives used for features and the popularity prior. exclude: every (user, item) already
+        rated, whatever the rating (default: history) - never recommended.
         The towers were trained with logQ correction, so u·v/temp scores affinity without popularity. Adding
         log q(item) back gives the full estimate of log p(item | user). Augmenting the vectors as
         user [u/temp, 1] · item [v, log q] keeps that a single inner-product ANN search."""
@@ -42,7 +43,8 @@ class Recommender:
         self.index.hnsw.efSearch = ef_search
         self.index.add(np.hstack([self.item_emb, pad]).astype(np.float32))
         self.seen = [set() for _ in range(n_users)]
-        for u, i in zip(history.user, history.item):
+        exclude = history if exclude is None else exclude
+        for u, i in zip(exclude.user, exclude.item):
             self.seen[u].add(i)
         self.popular = np.argsort(-counts, kind="stable")
         self.log_pop = np.log1p(counts)
@@ -102,8 +104,11 @@ def build(epochs=15, seed=0, data=None):
     t = time.perf_counter()
     _, ue, ie = train_towers(train, users, items, epochs=epochs, seed=seed)
     train_s = time.perf_counter() - t
-    ranker = Recommender(ue, ie, train, items).fit_ranker(val, seed).ranker
-    rec = Recommender(ue, ie, pd.concat([train, val]), items)
+    # everything the user rated (any rating) is excluded, except the held-out item(s) being predicted
+    held_val = ratings.merge(pd.concat([val, test])[["user", "item"]], how="left", indicator=True)
+    held_test = ratings.merge(test[["user", "item"]], how="left", indicator=True)
+    ranker = Recommender(ue, ie, train, items, exclude=held_val[held_val._merge == "left_only"]).fit_ranker(val, seed).ranker
+    rec = Recommender(ue, ie, pd.concat([train, val]), items, exclude=held_test[held_test._merge == "left_only"])
     rec.ranker = ranker
     return rec, test, {"train_seconds": train_s, "n_train": len(train), "n_test": len(test)}
 

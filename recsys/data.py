@@ -36,7 +36,7 @@ def synthetic(n_users=N_USERS, n_items=N_ITEMS, n_ratings=100_000, seed=0):
 
 def load(seed=0):
     """Real ML-100k from data/raw/ml-100k if present (ids re-based to 0), else synthetic."""
-    if not (RAW / "u.data").exists():
+    if not all((RAW / f).exists() for f in ("u.data", "u.item", "u.user")):
         return synthetic(seed=seed)
     r = pd.read_csv(RAW / "u.data", sep="\t", names=["user", "item", "rating", "ts"])
     r[["user", "item"]] -= 1
@@ -51,7 +51,7 @@ def load(seed=0):
 def split(ratings: pd.DataFrame, min_pos: int = 3):
     """Implicit positives (rating >= 4). Per user, by time: last -> test, second last -> val, rest -> train.
     Users with fewer than min_pos positives stay entirely in train."""
-    pos = ratings[ratings.rating >= 4].sort_values(["user", "ts"])
+    pos = ratings[ratings.rating >= 4].sort_values(["user", "ts", "item"], kind="stable")  # real data has ts ties
     rank = pos.groupby("user").cumcount(ascending=False)  # 0 = latest
     n = pos.groupby("user").user.transform("size")
     held = n >= min_pos
